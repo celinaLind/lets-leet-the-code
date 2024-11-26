@@ -40,3 +40,16 @@ def reverseList(head: Optional[ListNode]) -> Optional[ListNode]:
 
     # Time Complexity O(n)
     # Space Complexity O(1)
+
+
+    # Recursive Solution
+    # def reverseList(head: Optional[ListNode]) -> Optional[ListNode]:
+    #     if head is None or head.next is None:
+    #         return head
+    #     reversedList = reverseList(head.next)
+    #     head.next.next = head
+    #     head.next = None
+    #     return reversedList
+
+    # Time Complexity O(n)
+    # Space Complexity O(n) due to the recursive call stack
