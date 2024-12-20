@@ -61,3 +61,34 @@ def isPalindrome(s: str) -> bool:
 
     return True
 
+
+# Version 3
+# Time Complexity: O(n)
+# Space Complexity: O(1)
+def is_palindrome(s):
+    # Convert the string to lowercase to ignore case
+    s = s.lower()
+    
+    # Initialize two pointers, one at the start and one at the end of the string
+    left, right = 0, len(s) - 1
+    
+    # Iterate until the two pointers meet
+    while left < right:
+        # Ignore non-alphanumeric characters from the left
+        while left < right and not s[left].isalnum():
+            left += 1
+        
+        # Ignore non-alphanumeric characters from the right
+        while left < right and not s[right].isalnum():
+            right -= 1
+        
+        # If characters at the two pointers don't match, it's not a palindrome
+        if s[left] != s[right]:
+            return False
+        
+        # Move the pointers towards the center
+        left += 1
+        right -= 1
+    
+    # If the loop completes without returning False, it's a palindrome
+    return True
