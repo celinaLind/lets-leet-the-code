@@ -1,0 +1,115 @@
+# Write your MySQL query statement below
+# VERSION-1 SOLUTION (FAILED)
+-- SELECT FORMAT(SUM(CASE WHEN player_id THEN 1 ELSE 0 END) / COUNT(*), 2) AS fraction
+-- FROM Activity
+-- GROUP BY player_id
+-- HAVING count(*) >=2;
+
+# VERSION-2 SOLUTION (FAILED)
+-- SELECT
+--     CAST(
+--         SUM(CASE
+--             WHEN row_num > 1 AND games_played >= 2 THEN 1 ELSE 0 END)
+--         / COUNT(*) AS DECIMAL(10,2)
+--     ) AS fraction
+-- FROM (
+--     SELECT
+--         player_id,
+--         event_date,
+--         games_played,
+--         ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY event_date) AS row_num
+--    FROM Activity
+-- ) AS subquery;
+
+# VERSION-3 SOLUTION (FAILED)
+-- SELECT
+--     CAST(
+--         (SELECT COUNT(*)
+--         FROM Activity
+--         WHERE player_id IN (
+--             SELECT DISTINCT player_id
+--             FROM (
+--                 SELECT player_id,
+--                 ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY event_date) AS row_num,
+--                 games_played
+--                 FROM Activity
+--             ) AS subquery
+--             WHERE row_num > 1 AND games_played >=2
+--         )) / COUNT(*) AS DECIMAL(10,2)
+--     ) AS fraction
+--     FROM Activity;
+
+# VERSION-4 SOLUTION (FAILED)
+-- SELECT 
+--     CAST(
+--             (SELECT COUNT(*)
+--             FROM Activity
+--             WHERE player_id IN (
+--                 SELECT DISTINCT player_id
+--                 FROM (
+--                     SELECT 
+--                         player_id,
+--                         event_date,
+--                         LAG(event_date) OVER (PARTITION BY player_id ORDER BY event_date) AS prev_event_date
+--                     FROM Activity
+--                 ) AS subquery
+--                 WHERE DATEDIFF(event_date, prev_event_date) = 1
+--             )) / COUNT(DISTINCT player_id) AS DECIMAL(10,2)
+--     ) AS fraction
+-- FROM Activity;
+
+# VERSION-5 SOLUTION (SUCCESS)
+WITH FirstLogin AS (
+    SELECT 
+        player_id, 
+        MIN(event_date) AS first_login_date
+    FROM Activity
+    GROUP BY player_id
+),
+ConsecutiveLogins AS (
+    SELECT 
+        a.player_id
+    FROM Activity a
+    JOIN FirstLogin fl
+    ON a.player_id = fl.player_id
+    WHERE DATEDIFF(a.event_date, fl.first_login_date) = 1
+)
+SELECT 
+    CAST(COUNT(DISTINCT cl.player_id) / 
+   COUNT(DISTINCT fl.player_id) AS DECIMAL(10, 2)) AS fraction
+FROM FirstLogin fl
+LEFT JOIN ConsecutiveLogins cl
+ON fl.player_id = cl.player_id;
+
+# Time Taken: 52m 28sec
+# Runtime: 1977ms
+
+/*
+    NOTES:
+    - WITH clause is used to create a temporary table that can be used in the subsequent SELECT, INSERT, UPDATE, or DELETE statement.
+    - The FirstLogin CTE is used to get the first login date of each player.
+    - CTE stands for Common Table Expression.
+        - The ConsecutiveLogins CTE is used to get the player_id of the players who have logged in consecutively.
+    - The final SELECT statement is used to get the fraction of players who have logged in consecutively.
+    - The CAST function is used to convert the result to a decimal with 2 decimal places.
+    - The DATEDIFF function is used to calculate the difference in days between two dates.
+    - The LEFT JOIN is used to join the FirstLogin and ConsecutiveLogins CTEs.
+    - The COUNT function is used to count the number of distinct player_ids in each CTE.
+    - The DISTINCT keyword is used to remove duplicate player_ids.
+    - The FORMAT function is used to format the result as a decimal with 2 decimal places. But this function returns a string, so it cannot be used in this case.
+*/
+
+# BETTER SOLUTION
+
+WITH FirstDay AS (
+    select player_id, min(event_date) as first_date
+    from Activity
+    group by player_id
+)
+
+select round(count(a.player_id)/(select count(distinct b.player_id) from Activity b), 2) as fraction
+from Activity a
+join FirstDay using (player_id)
+where DATEDIFF(a.event_date, first_date) = 1
+
+# Runtime: 561ms
